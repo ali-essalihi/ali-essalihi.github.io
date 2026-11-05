@@ -336,6 +336,9 @@ function setup() {
   view(`<div class="card"><h2>Nouveau groupe</h2>
   <label>Nom du groupe<input id="gn" maxlength="20" placeholder="Ex : Les Étoiles"></label>
   <h3>Les membres (2 à 6)</h3><div id="ms"></div>
+  <h3>Niveau de départ</h3>
+  <label>Le groupe commence au niveau :<select id="sl">${LV.map((l, i) => `<option value="${i}">${i === 0 ? 'Niveau 1 : ' + l.t + ' (depuis le début)' : 'Niveau ' + (i + 1) + ' : ' + l.t}</option>`).join('')}</select></label>
+  <small>Les niveaux avant celui-ci sont déjà réussis, avec 3 étoiles pour tout le monde.</small>
   <button class="btn s" id="add">➕ Ajouter un membre</button>
   <p class="hint" id="msg"></p><button class="btn" id="go">🚀 Commencer l'aventure</button></div>`);
   const ms = $('#ms'), add = () => {
@@ -349,7 +352,9 @@ function setup() {
     if (ns.length < 2) return $('#msg').textContent = "Il faut au moins 2 membres.";
     if (new Set(ns.map(n => n.toLowerCase())).size < ns.length) return $('#msg').textContent = "Deux membres ont le même prénom.";
     if (S.groups[gn]) return $('#msg').textContent = "Ce nom de groupe existe déjà.";
-    S.groups[gn] = { members: ns.map((n, i) => ({ n, av: AV[i] })), prog: {} }; S.cur = gn; save(); map();
+    const start = +$('#sl').value, prog = {};
+    for (let i = 0; i < start; i++) { prog[i] = {}; ns.forEach(n => prog[i][n] = 3); }   // levels before the start level: 3 stars for everyone
+    S.groups[gn] = { members: ns.map((n, i) => ({ n, av: AV[i] })), prog }; S.cur = gn; save(); map();
   };
 }
 
@@ -437,5 +442,36 @@ function bilan() {
 
 /* ---------- Barre du haut ---------- */
 $('#bHome').onclick = home;
-$('#bHelp').onclick = () => alert("Aide\n\n• Lis la consigne, puis clique sur « Je suis prêt(e) ».\n• Chaque membre du groupe joue à son tour.\n• Quand tout le monde a réussi, le niveau suivant s'ouvre.\n• Tu peux rejouer un niveau terminé pour gagner plus d'étoiles.\n• Tu peux te tromper : essaie encore !");
+/* ---------- Gestion des groupes : Ctrl + Maj + G ---------- */
+const adm = $('#adm');
+let admKeys = null, admLeft = false;   // key handlers saved while the dialog is open
+function admRender() {
+  const names = Object.keys(S.groups);
+  adm.innerHTML = `<h2 id="adm-t">🛠️ Gérer les groupes</h2>` + (names.length ? names.map(n => {
+    const g = S.groups[n], lv = LV.filter((_, i) => done(g, i)).length;
+    return `<div class="grow"><div><b>${esc(n)}</b><br><small>${g.members.map(m => esc(m.n)).join(', ')} · ${lv}/${LV.length} niveaux réussis</small></div>
+    <button class="btn danger" data-del="${esc(n)}">🗑️ Supprimer</button></div>`;
+  }).join('') : '<p>Aucun groupe pour le moment.</p>') +
+  `<p><button class="btn" id="adm-new">➕ Créer un groupe</button> <button class="btn s" id="adm-x">Fermer</button></p>
+  <small>Raccourci : <span class="kb">Ctrl</span> + <span class="kb">Maj</span> + <span class="kb">G</span></small>`;
+  adm.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!b.dataset.arm) { b.dataset.arm = 1; b.textContent = '⚠️ Sûr ? Clique encore'; return; }   // 2 clicks to confirm
+    const n = b.dataset.del; delete S.groups[n];
+    if (S.cur === n) { S.cur = null; admLeft = true; save(); admRender(); home(); return; }
+    save(); admRender(); if ($('#nw')) { admLeft = true; home(); }
+  });
+  $('#adm-new').onclick = () => { admLeft = true; adm.close(); setup(); };
+  $('#adm-x').onclick = () => adm.close();
+}
+function admOpen() {
+  if (adm.open) return adm.close();
+  admKeys = [window.onkeydown, window.onkeyup]; admLeft = false;
+  window.onkeydown = window.onkeyup = null;      // a running keyboard level must not swallow Enter / Space in the dialog
+  admRender(); adm.showModal();
+}
+adm.addEventListener('close', () => { if (!admLeft && admKeys) [window.onkeydown, window.onkeyup] = admKeys; admKeys = null; });
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && e.code === 'KeyG') { e.preventDefault(); admOpen(); }
+});
+
 S.cur && S.groups[S.cur] ? map() : home();
