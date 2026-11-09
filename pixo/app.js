@@ -1,6 +1,20 @@
 /* Pixo et l'Aventure Numérique : Monde 1 (souris) et Monde 2 (clavier) */
 const $ = s => document.querySelector(s);
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- Emojis -> SVG Twemoji (les données gardent les vrais emojis) ---------- */
+const TWEMOJI = 'assets/emoji/';   // SVG Twemoji embarqués : aucune ressource distante (fonctionne hors ligne)
+const EMOJI_RE = /(?:[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u231A\u231B\u2328\u23CF\u23E9-\u23F3\u23F8-\u23FA\u25B6\u25C0\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u261D\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2648-\u2653\u265F\u2660\u2663\u2665\u2666\u2668\u267B\u267E\u267F\u2692-\u2697\u2699\u269B\u269C\u26A0\u26A1\u26AA\u26AB\u26B0\u26B1\u26BD\u26BE\u26C4\u26C5\u26CE\u26D4\u26EA\u26F2-\u26F5\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55])(?:\uD83C[\uDFFB-\uDFFF])?\uFE0F?(?:\u200D(?:[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2640\u2642\u2695\u2696\u2708\u2764])\uFE0F?)*/g;
+/* Convertit chaque emoji d'une chaîne en <img> Twemoji. Accepte aussi du HTML : le texte à l'intérieur des balises
+   (attributs) n'est jamais touché, et les <img> déjà générés ne sont pas retraités. */
+function getEmojiImg(str) {
+  return String(str).split(/(<[^>]*>)/).map((part, i) => i % 2 ? part : part.replace(EMOJI_RE, m => {
+    let cps = Array.from(m).map(c => c.codePointAt(0).toString(16));
+    if (cps.indexOf('200d') < 0) cps = cps.filter(c => c !== 'fe0f');   // même règle que Twemoji
+    return `<img class="emoji" draggable="false" alt="${m}" src="${TWEMOJI}${cps.join('-')}.svg">`;
+  })).join('');
+}
+
 const AV = ['🦊', '🐼', '🐸', '🦁', '🐙', '🐯'];
 const app = $('#app');
 const W = { 0: 'Monde 1 : La Souris', 14: 'Monde 2 : Le Clavier' };
@@ -20,7 +34,7 @@ const gStars = g => g.members.reduce((t, m) => t + mStars(g, m), 0);
 
 const put = (st, t, x, y, c = '') => {
   const e = document.createElement('span');
-  e.className = 'obj ' + c; e.textContent = t; e.style.left = x + '%'; e.style.top = y + '%'; st.appendChild(e); return e;
+  e.className = 'obj ' + c; e.innerHTML = getEmojiImg(t); e.style.left = x + '%'; e.style.top = y + '%'; st.appendChild(e); return e;
 };
 const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -73,7 +87,7 @@ const LV = [
     [[20,50],[50,50],[80,50]].forEach(p => {
       const e = put(st, '🧰', p[0], p[1], 'lit'); let t, open = false;
       e.onclick = () => { if (open) return; clearTimeout(t); t = setTimeout(() => err("Un seul clic ne suffit pas : fais deux clics rapides !"), 700); };
-      e.ondblclick = () => { if (open) return; clearTimeout(t); open = true; e.textContent = '🦾'; e.className = 'obj'; if (++n === 3) ok(); };
+      e.ondblclick = () => { if (open) return; clearTimeout(t); open = true; e.innerHTML = getEmojiImg('🦾'); e.className = 'obj'; if (++n === 3) ok(); };
     });
     h("Deux clics, vite vite, sans bouger la souris.");
   } },
@@ -91,7 +105,7 @@ const LV = [
         menu.style.left = (ev.clientX - b.left) + 'px'; menu.style.top = (ev.clientY - b.top) + 'px';
         ['Copier', 'Ouvrir', 'Supprimer'].forEach(l => {
           const d = document.createElement('div'); d.textContent = l;
-          d.onclick = e2 => { e2.stopPropagation(); close(); if (l !== 'Ouvrir') return err("Choisis « Ouvrir » dans le menu."); opened = true; e.textContent = '🦿'; e.className = 'obj'; if (++n === 3) ok(); };
+          d.onclick = e2 => { e2.stopPropagation(); close(); if (l !== 'Ouvrir') return err("Choisis « Ouvrir » dans le menu."); opened = true; e.innerHTML = getEmojiImg('🦿'); e.className = 'obj'; if (++n === 3) ok(); };
           menu.appendChild(d);
         });
         st.appendChild(menu);
@@ -131,7 +145,7 @@ const LV = [
 { t: 'La molette', part: '🔋', pn: 'la batterie',
   intro: "La batterie de Pixo est cachée tout en bas de la page. Tourne la molette de la souris vers toi pour faire défiler, puis clique sur la batterie.",
   build(st, h, ok) {
-    st.innerHTML = '<div class="sc"><p>Pixo a caché sa batterie tout en bas…</p><p>Continue de faire défiler ⬇️</p><p>Encore un peu ⬇️⬇️</p><p>Tu y es presque ⬇️⬇️⬇️</p><p>Plus qu\'un petit effort ⬇️</p><p><button class="btn" id="bat">🔋 Prendre la batterie</button></p></div>';
+    st.innerHTML = getEmojiImg('<div class="sc"><p>Pixo a caché sa batterie tout en bas…</p><p>Continue de faire défiler ⬇️</p><p>Encore un peu ⬇️⬇️</p><p>Tu y es presque ⬇️⬇️⬇️</p><p>Plus qu\'un petit effort ⬇️</p><p><button class="btn" id="bat">🔋 Prendre la batterie</button></p></div>');
     $('#bat').onclick = ok;
     h("Molette vers toi = descendre. Sur un ordinateur portable : glisse deux doigts sur le pad tactile.");
   } },
@@ -208,14 +222,14 @@ E('Ma fiche de contact', '🏆', 'son badge de clavier', "Dernier défi du clavi
 function typer(P, caps) {
   return (st, h, ok, err) => {
     let p = 0, i = 0;
-    st.innerHTML = '<div class="tw"><div><div id="tl" class="tl"></div><div id="tn"></div>' + (caps ? '<div id="cl" class="cl">🔓 Appuie sur Verr Maj pour voir ce qui se passe</div>' : '') + '</div></div>';
+    st.innerHTML = '<div class="tw"><div><div id="tl" class="tl"></div><div id="tn"></div>' + (caps ? getEmojiImg('<div id="cl" class="cl">🔓 Appuie sur Verr Maj pour voir ce qui se passe</div>') : '') + '</div></div>';
     const cl = e => {
       const c = $('#cl'); if (!c || !e.getModifierState) return; const on = e.getModifierState('CapsLock');
-      c.textContent = on ? '🔒 Verr Maj : ACTIVÉE (lettres en MAJUSCULES)' : '🔓 Verr Maj : éteinte (lettres en minuscules)'; c.className = 'cl' + (on ? ' on' : '');
+      c.innerHTML = getEmojiImg(on ? '🔒 Verr Maj : ACTIVÉE (lettres en MAJUSCULES)' : '🔓 Verr Maj : éteinte (lettres en minuscules)'); c.className = 'cl' + (on ? ' on' : '');
     };
     const r = () => {
       $('#tl').innerHTML = [...P[p].s].map((c, j) => `<span class="${j < i ? 'okc' : j === i ? 'cur' : ''}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('');
-      $('#tn').textContent = P[p].n || ''; h(`Exercice ${p + 1} sur ${P.length} : tape la lettre soulignée.`);
+      $('#tn').innerHTML = getEmojiImg(esc(P[p].n || '')); h(`Exercice ${p + 1} sur ${P.length} : tape la lettre soulignée.`);
     };
     window.onkeyup = cl;
     window.onkeydown = e => {
@@ -320,7 +334,7 @@ function road(wd) {
 }
 
 /* ---------- Écrans ---------- */
-const view = html => { window.onkeydown = window.onkeyup = null; app.innerHTML = html; };
+const view = html => { window.onkeydown = window.onkeyup = null; app.innerHTML = getEmojiImg(html); };
 
 function home() {
   const names = Object.keys(S.groups);
@@ -343,7 +357,7 @@ function setup() {
   <p class="hint" id="msg"></p><button class="btn" id="go">🚀 Commencer l'aventure</button></div>`);
   const ms = $('#ms'), add = () => {
     const i = ms.children.length; if (i >= 6) return;
-    ms.insertAdjacentHTML('beforeend', `<label>${AV[i]} Prénom ${i + 1}<input maxlength="15"></label>`);
+    ms.insertAdjacentHTML('beforeend', `<label>${getEmojiImg(AV[i])} Prénom ${i + 1}<input maxlength="15"></label>`);
   };
   add(); add(); $('#add').onclick = add;
   $('#go').onclick = () => {
@@ -400,7 +414,7 @@ function ready(li, m) {
 function start(li, m) {
   const L = LV[li]; let errs = 0;
   view(`<div class="card"><h2>${m.av} ${esc(m.n)} : ${L.t}</h2><div class="hint" id="h"></div><div class="stage" id="st"></div></div>`);
-  const st = $('#st'), h = t => $('#h').textContent = t;
+  const st = $('#st'), h = t => $('#h').innerHTML = getEmojiImg(esc(t));
   const err = t => { errs++; h('💡 ' + t); };
   const ok = () => {
     const tol = L.tol || 1, stars = errs <= tol ? 3 : errs <= tol * 3 ? 2 : 1, g = G(), prev = star(g, li, m);
@@ -428,7 +442,7 @@ function bilan() {
     const t = mStars(g, m), r = rank(t / mx);
     const bs = WR.filter(w => { let s = 0; for (let i = w[0]; i < w[1]; i++) s += star(g, i, m); return s >= (w[1] - w[0]) * 3 * .8; })
       .map(w => `<span class="chip on">${w[2]} ${w[3]}</span>`).join('') || "<small>Rejoue des niveaux pour gagner des badges !</small>";
-    return `<div class="card" style="text-align:center"><h2>${m.av} ${esc(m.n)}</h2><div class="stars">${r[0]}</div><h3>${r[1]}</h3><p>⭐ ${t} sur ${mx} étoiles</p><div>${bs}</div></div>`;
+    return `<div class="card" style="text-align:center"><h2>${getEmojiImg(m.av)} ${esc(m.n)}</h2><div class="stars">${r[0]}</div><h3>${r[1]}</h3><p>⭐ ${t} sur ${mx} étoiles</p><div>${bs}</div></div>`;
   }).join('');
   const gp = tot / (mx * g.members.length), r = rank(gp);
   view(`<div class="card" style="text-align:center;border-color:var(--y)"><h1>🎓 Diplôme du groupe « ${esc(S.cur)} »</h1>
@@ -441,21 +455,24 @@ function bilan() {
 }
 
 /* ---------- Barre du haut ---------- */
+/* Emojis statiques de index.html */
+$('header span').innerHTML = getEmojiImg($('header span').textContent);
+$('#bHome').innerHTML = getEmojiImg($('#bHome').textContent);
 $('#bHome').onclick = home;
 /* ---------- Gestion des groupes : Ctrl + Maj + G ---------- */
 const adm = $('#adm');
 let admKeys = null, admLeft = false;   // key handlers saved while the dialog is open
 function admRender() {
   const names = Object.keys(S.groups);
-  adm.innerHTML = `<h2 id="adm-t">🛠️ Gérer les groupes</h2>` + (names.length ? names.map(n => {
+  adm.innerHTML = getEmojiImg(`<h2 id="adm-t">🛠️ Gérer les groupes</h2>` + (names.length ? names.map(n => {
     const g = S.groups[n], lv = LV.filter((_, i) => done(g, i)).length;
     return `<div class="grow"><div><b>${esc(n)}</b><br><small>${g.members.map(m => esc(m.n)).join(', ')} · ${lv}/${LV.length} niveaux réussis</small></div>
     <button class="btn danger" data-del="${esc(n)}">🗑️ Supprimer</button></div>`;
   }).join('') : '<p>Aucun groupe pour le moment.</p>') +
   `<p><button class="btn" id="adm-new">➕ Créer un groupe</button> <button class="btn s" id="adm-x">Fermer</button></p>
-  <small>Raccourci : <span class="kb">Ctrl</span> + <span class="kb">Maj</span> + <span class="kb">G</span></small>`;
+  <small>Raccourci : <span class="kb">Ctrl</span> + <span class="kb">Maj</span> + <span class="kb">G</span></small>`);
   adm.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
-    if (!b.dataset.arm) { b.dataset.arm = 1; b.textContent = '⚠️ Sûr ? Clique encore'; return; }   // 2 clicks to confirm
+    if (!b.dataset.arm) { b.dataset.arm = 1; b.innerHTML = getEmojiImg('⚠️ Sûr ? Clique encore'); return; }   // 2 clicks to confirm
     const n = b.dataset.del; delete S.groups[n];
     if (S.cur === n) { S.cur = null; admLeft = true; save(); admRender(); home(); return; }
     save(); admRender(); if ($('#nw')) { admLeft = true; home(); }

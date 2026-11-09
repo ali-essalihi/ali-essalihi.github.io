@@ -17,10 +17,10 @@ function explorer(st, cfg) {
     st.appendChild(m);
   };
   a.render = () => {
-    st.querySelector('#ep').textContent = '📂 ' + path.map(p => p.n).join(' › '); eg.innerHTML = '';
+    st.querySelector('#ep').innerHTML = getEmojiImg('📂') + ' ' + esc(path.map(p => p.n).join(' › ')); eg.innerHTML = '';
     cwd().c.forEach(it => {
       const d = document.createElement('div'); d._it = it; d.className = 'ei' + (sel === it ? ' sel' : '');
-      d.innerHTML = `<span class="ic">${it.ic}</span>` + (rn === it ? '<input maxlength="24">' : `<span>${esc(it.n)}</span>`);
+      d.innerHTML = `<span class="ic">${getEmojiImg(it.ic)}</span>` + (rn === it ? '<input maxlength="24">' : `<span>${esc(it.n)}</span>`);
       d.onclick = e => { e.stopPropagation(); mclose(); sel = it; mark(d); };
       d.ondblclick = () => cfg.dbl && cfg.dbl(it, a);
       d.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); mclose(); sel = it; mark(d); menu(e, it); };
@@ -59,7 +59,7 @@ function mkwin(st, o) {
   const set = (x, y, W, Hh) => { w.style.left = x + 'px'; w.style.top = y + 'px'; w.style.width = W + 'px'; w.style.height = Hh + 'px'; };
   w.set = set; set(o.x, o.y, o.w, o.h); w.style.zIndex = ++Z;
   const B = [['min', '—', 'Réduire'], ['max', '▢', 'Agrandir'], ['close', '✕', 'Fermer']];
-  w.innerHTML = `<div class="wt"><span>${o.ic} ${o.t}</span><span>${B.map(b => `<button class="wb ${b[0] === 'close' ? 'x' : ''}" data-a="${b[0]}" title="${b[2]}">${b[1]}</button>`).join('')}</span></div><div class="wc">${o.body || ''}</div>${o.rz ? '<div class="rz"></div>' : ''}`;
+  w.innerHTML = `<div class="wt"><span>${getEmojiImg(o.ic)} ${o.t}</span><span>${B.map(b => `<button class="wb ${b[0] === 'close' ? 'x' : ''}" data-a="${b[0]}" title="${b[2]}">${b[1]}</button>`).join('')}</span></div><div class="wc">${getEmojiImg(o.body || '')}</div>${o.rz ? '<div class="rz"></div>' : ''}`;
   st.appendChild(w); w.onpointerdown = () => w.style.zIndex = ++Z;
   const stH = o.bottom ? st.clientHeight - 52 : st.clientHeight;
   w.act = x => {
@@ -163,7 +163,7 @@ LV.push(
         H('pop'); i++; if (i === S.length) { setTimeout(ok, 300); return true; }
         h(S[i][1]);
         if (S[i][0] === 'tb') {
-          const b = document.createElement('button'); b.className = 'btn'; b.textContent = '✉️ Ma lettre';
+          const b = document.createElement('button'); b.className = 'btn'; b.innerHTML = getEmojiImg('✉️ Ma lettre');
           b.onclick = () => { w.style.display = ''; b.remove(); H('pop'); i++; h(S[i][1]); }; tb.appendChild(b);
         }
         return true;
@@ -217,7 +217,7 @@ function bilan() {
   const cards = g.members.map(m => {
     const s = LV.map((_, i) => (g.prog[i] && g.prog[i][m.n]) || 0), t = s.reduce((x, y) => x + y, 0); tot += t;
     const r = rank(t / mx), bs = WR.filter(w => s.slice(w[0], w[1]).reduce((x, y) => x + y, 0) >= (w[1] - w[0]) * 3 * .8).map(w => `<span class="chip on">${w[2]} ${w[3]}</span>`).join('') || "<small>Rejoue des niveaux pour gagner des badges !</small>";
-    return `<div class="card" style="text-align:center"><h2>${m.av} ${esc(m.n)}</h2><div class="stars">${r[0]}</div><h3>${r[1]}</h3><p>⭐ ${t} sur ${mx} étoiles</p><div>${bs}</div></div>`;
+    return `<div class="card" style="text-align:center"><h2>${getEmojiImg(m.av)} ${esc(m.n)}</h2><div class="stars">${r[0]}</div><h3>${r[1]}</h3><p>⭐ ${t} sur ${mx} étoiles</p><div>${bs}</div></div>`;
   }).join('');
   const gp = tot / (mx * g.members.length), r = rank(gp);
   view(`<div class="card" style="text-align:center;border-color:var(--y)"><h1>🎓 Diplôme du groupe « ${esc(S.cur)} »</h1>
